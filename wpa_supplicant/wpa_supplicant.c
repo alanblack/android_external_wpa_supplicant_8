@@ -53,6 +53,9 @@
 #include "wnm_sta.h"
 #include "wpas_kay.h"
 
+#ifdef CONFIG_PRYFI
+#include "drivers/pryfi.h"
+#endif
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
 "Copyright (c) 2003-2014, Jouni Malinen <j@w1.fi> and contributors";
@@ -1395,7 +1398,14 @@ static void wpas_start_assoc_cb(struct wpa_radio_work *work, int deinit);
 void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			      struct wpa_bss *bss, struct wpa_ssid *ssid)
 {
+
+	wpa_msg(wpa_s, MSG_INFO, "Tospr: start wpa_supplicant_associate");
 	struct wpa_connect_work *cwork;
+
+	#ifdef CONFIG_PRYFI
+		wpa_msg(wpa_s, MSG_INFO, "Tospr: CONFIG_PRYFI in wpa_supplicant defined.");
+		pryfi_pre_associate(wpa_s, bss, ssid);
+	#endif
 
 #ifdef CONFIG_IBSS_RSN
 	ibss_rsn_deinit(wpa_s->ibss_rsn);

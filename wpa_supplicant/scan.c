@@ -23,6 +23,9 @@
 #include "bss.h"
 #include "scan.h"
 
+#ifdef CONFIG_PRYFI
+#include "drivers/pryfi.h"
+#endif
 
 static void wpa_supplicant_gen_assoc_event(struct wpa_supplicant *wpa_s)
 {
@@ -190,6 +193,9 @@ static void wpas_trigger_scan_cb(struct wpa_radio_work *work, int deinit)
 int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 				struct wpa_driver_scan_params *params)
 {
+#ifdef CONFIG_PRYFI
+	pryfi_pre_trigger_scan(wpa_s, params);
+#endif
 	struct wpa_driver_scan_params *ctx;
 
 	if (wpa_s->scan_work) {
@@ -1078,6 +1084,10 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	int wildcard = 0;
 	int need_ssids;
 
+#ifdef CONFIG_PRYFI
+	// emulate disable_scan_offload being set, already the case for many devices
+	return -1;
+#endif
 	if (!wpa_s->sched_scan_supported)
 		return -1;
 
@@ -1355,6 +1365,9 @@ void wpa_supplicant_cancel_sched_scan(struct wpa_supplicant *wpa_s)
 void wpa_supplicant_notify_scanning(struct wpa_supplicant *wpa_s,
 				    int scanning)
 {
+#ifdef CONFIG_PRYFI
+	pryfi_notify_scanning(wpa_s, scanning);
+#endif
 	if (wpa_s->scanning != scanning) {
 		wpa_s->scanning = scanning;
 		wpas_notify_scanning(wpa_s);
@@ -2020,6 +2033,10 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 
 	if (wpa_s->conf->filter_rssi)
 		params.filter_rssi = wpa_s->conf->filter_rssi;
+		
+		#ifdef CONFIG_PRYFI
+			pryfi_pno_start(wpa_s);
+		#endif
 
 	interval = wpa_s->conf->sched_scan_interval ?
 		wpa_s->conf->sched_scan_interval : 10;
@@ -2035,6 +2052,11 @@ int wpas_start_pno(struct wpa_supplicant *wpa_s)
 		wpa_s->pno = 1;
 	else
 		wpa_msg(wpa_s, MSG_ERROR, "Failed to schedule PNO");
+		
+	#ifdef CONFIG_PRYFI
+		if (!wpa_s->pno)
+			pryfi_pno_stop(wpa_s);
+	#endif	
 	return ret;
 }
 
@@ -2050,6 +2072,10 @@ int wpas_stop_pno(struct wpa_supplicant *wpa_s)
 
 	wpa_s->pno = 0;
 	wpa_s->pno_sched_pending = 0;
+	
+	#ifdef CONFIG_PRYFI
+		pryfi_pno_stop(wpa_s);
+	#endif
 
 	if (wpa_s->wpa_state == WPA_SCANNING)
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
